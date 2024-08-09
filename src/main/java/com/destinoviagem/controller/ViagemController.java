@@ -1,6 +1,6 @@
 package com.destinoviagem.controller;
 
-import com.destinoviagem.model.Destino;
+import com.destinoviagem.dto.ViagemDTO;
 import com.destinoviagem.model.Viagem;
 import com.destinoviagem.repository.DestinoRepository;
 import com.destinoviagem.repository.ViagemRepository;
@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/viagens")
@@ -34,24 +35,32 @@ public class ViagemController {
     }
 
     @PostMapping
-    public ResponseEntity<Viagem> criarViagem(@RequestBody Viagem viagem) {
-        if (destinoRepository.existsById(viagem.getDestino().getId())) {
-            Viagem novaViagem = viagemRepository.save(viagem);
-            return new ResponseEntity<>(novaViagem, HttpStatus.CREATED);
-        } else {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    public ResponseEntity<Viagem> criarViagem(@RequestBody ViagemDTO viagemDTO) {
+        if (destinoRepository.existsById(viagemDTO.getDestinoId()) && viagemDTO.getDataInicio().isBefore(viagemDTO.getDataTermino())) {
+            Viagem novaViagem = new Viagem();
+            novaViagem.setTitulo(viagemDTO.getTitulo());
+            novaViagem.setDestino(destinoRepository.findById(viagemDTO.getDestinoId()).orElse(null));
+            novaViagem.setDataInicio(viagemDTO.getDataInicio());
+            novaViagem.setDataTermino(viagemDTO.getDataTermino());
+
+            return new ResponseEntity<>(viagemRepository.save(novaViagem), HttpStatus.CREATED);
         }
+        return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Viagem> atualizarViagem(@PathVariable Long id, @RequestBody Viagem viagem) {
-        if (viagemRepository.existsById(id)) {
-            viagem.setId(id);
-            Viagem viagemAtualizada = viagemRepository.save(viagem);
-            return new ResponseEntity<>(viagemAtualizada, HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    public ResponseEntity<Viagem> atualizarViagem(@PathVariable Long id, @RequestBody ViagemDTO viagemDTO) {
+        Optional<Viagem> viagemExistente = viagemRepository.findById(id);
+        if (viagemExistente.isPresent() && destinoRepository.existsById(viagemDTO.getDestinoId()) && viagemDTO.getDataInicio().isBefore(viagemDTO.getDataTermino())) {
+            Viagem viagem = viagemExistente.get();
+            viagem.setTitulo(viagemDTO.getTitulo());
+            viagem.setDestino(destinoRepository.findById(viagemDTO.getDestinoId()).orElse(null));
+            viagem.setDataInicio(viagemDTO.getDataInicio());
+            viagem.setDataTermino(viagemDTO.getDataTermino());
+
+            return new ResponseEntity<>(viagemRepository.save(viagem), HttpStatus.OK);
         }
+        return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
     }
 
     @DeleteMapping("/{id}")
@@ -59,9 +68,8 @@ public class ViagemController {
         if (viagemRepository.existsById(id)) {
             viagemRepository.deleteById(id);
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
     @GetMapping("/destinos/{destinoId}/viagens")
@@ -73,6 +81,5 @@ public class ViagemController {
     public List<Viagem> buscarViagensPorTitulo(@PathVariable String titulo) {
         return viagemRepository.findByTituloContainingIgnoreCase(titulo);
     }
-
     //"/titulo/{titulo}" => retorna todas as viagens que tem um titulo especifico
 }

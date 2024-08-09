@@ -1,5 +1,6 @@
 package com.destinoviagem.controller;
 
+import com.destinoviagem.dto.DestinoDTO;
 import com.destinoviagem.model.Destino;
 import com.destinoviagem.repository.DestinoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/destinos")
@@ -29,15 +31,23 @@ public class DestinoController {
     }
 
     @PostMapping
-    public ResponseEntity<Destino> criarDestino(@RequestBody Destino destino) {
+    public ResponseEntity<Destino> criarDestino(@RequestBody DestinoDTO destinoDTO) {
+        Destino destino = new Destino();
+        destino.setNome(destinoDTO.getNome());
+        destino.setPais(destinoDTO.getPais());
+
         Destino novoDestino = destinoRepository.save(destino);
         return new ResponseEntity<>(novoDestino, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Destino> atualizarDestino(@PathVariable Long id, @RequestBody Destino destino) {
-        if (destinoRepository.existsById(id)) {
-            destino.setId(id);
+    public ResponseEntity<Destino> atualizarDestino(@PathVariable Long id, @RequestBody DestinoDTO destinoDTO) {
+        Optional<Destino> destinoExistente = destinoRepository.findById(id);
+        if (destinoExistente.isPresent()) {
+            Destino destino = destinoExistente.get();
+            destino.setNome(destinoDTO.getNome());
+            destino.setPais(destinoDTO.getPais());
+
             Destino destinoAtualizado = destinoRepository.save(destino);
             return new ResponseEntity<>(destinoAtualizado, HttpStatus.OK);
         } else {
